@@ -13,9 +13,9 @@ let s:man_tag_depth = 0
 " }}}
 " man#get_page {{{1
 
-function! man#get_page(split_type, ...)
+function! man#get_page(split_type, mods, ...)
   if a:0 == 0
-    call s:handle_nroff_file_or_error(a:split_type)
+    call s:handle_nroff_file_or_error(a:split_type, a:mods)
     return
   elseif a:0 == 1
     let sect = ''
@@ -34,7 +34,7 @@ function! man#get_page(split_type, ...)
   endif
 
   call s:update_man_tag_variables()
-  call s:get_new_or_existing_man_window(a:split_type)
+  call s:get_new_or_existing_man_window(a:split_type, a:mods)
   call man#helpers#set_manpage_buffer_name(page, sect)
   call man#helpers#load_manpage_text(page, sect)
 endfunction
@@ -58,11 +58,11 @@ endfunction
 " :Man command in nroff files {{{1
 
 " handles :Man command invocation with zero arguments
-function! s:handle_nroff_file_or_error(split_type)
+function! s:handle_nroff_file_or_error(split_type, mods)
   " :Man command can be invoked in 'nroff' files to convert it to a manpage
   if &filetype ==# 'nroff'
     if filereadable(expand('%'))
-      return s:get_nroff_page(a:split_type, expand('%:p'))
+      return s:get_nroff_page(a:split_type, expand('%:p'), a:mods)
     else
       return man#helpers#error("Can't open file ".expand('%'))
     endif
@@ -73,9 +73,9 @@ function! s:handle_nroff_file_or_error(split_type)
 endfunction
 
 " open a nroff file as a manpage
-function! s:get_nroff_page(split_type, nroff_file)
+function! s:get_nroff_page(split_type, nroff_file, mods)
   call s:update_man_tag_variables()
-  call s:get_new_or_existing_man_window(a:split_type)
+  call s:get_new_or_existing_man_window(a:split_type, a:mods)
   silent exec 'edit '.fnamemodify(a:nroff_file, ':t').'\ manpage\ (from\ nroff)'
   call man#helpers#load_manpage_text(a:nroff_file, '')
 endfunction
@@ -137,7 +137,7 @@ function! s:update_man_tag_variables()
   let s:man_tag_depth += 1
 endfunction
 
-function! s:get_new_or_existing_man_window(split_type)
+function! s:get_new_or_existing_man_window(split_type, mods)
   if &filetype != 'man'
     let thiswin = winnr()
     exec "norm! \<C-W>b"
@@ -155,11 +155,11 @@ function! s:get_new_or_existing_man_window(split_type)
     endif
     if &filetype != 'man'
       if a:split_type == 'vertical'
-        vnew
+        exec a:mods.' vnew'
       elseif a:split_type == 'tab'
         tabnew
       else
-        new
+        exec a:mods.' new'
       endif
     endif
   endif
